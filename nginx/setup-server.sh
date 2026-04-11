@@ -6,7 +6,7 @@ set -e
 
 FEBOR_DIR="/var/www/febor"
 COURSES_DIR="/var/www/febor/cursos"
-APPSETTINGS="/opt/feborbackasociado/appsettings.Production.json"
+APPSETTINGS="/opt/feborbackadmin/appsettings.Production.json"
 NGINX_SITE="/etc/nginx/sites-enabled/febor.conf"
 
 # ── 1. Directorios ────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ if [ -f "$APPSETTINGS" ]; then
     python3 - <<'PYEOF'
 import json
 
-path = '/opt/feborbackasociado/appsettings.Production.json'
+path = '/opt/feborbackadmin/appsettings.Production.json'
 with open(path, 'r') as f:
     cfg = json.load(f)
 

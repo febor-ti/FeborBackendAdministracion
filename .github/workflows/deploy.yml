@@ -38,7 +38,7 @@ jobs:
       - name: Stop service
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            sudo systemctl stop feborbackasociado || true
+            sudo systemctl stop feborbackadmin || true
             sleep 3
             sudo pkill -f "FeborBack.Api" || true
             sleep 2
@@ -47,7 +47,7 @@ jobs:
       - name: Backup current deployment
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            'sudo cp -r /opt/feborbackasociado /opt/feborbackasociado-backup-$(date +%Y%m%d%H%M) 2>/dev/null || true'
+            'sudo cp -r /opt/feborbackadmin /opt/feborbackadmin-backup-$(date +%Y%m%d%H%M) 2>/dev/null || true'
 
       - name: Deploy new files
         run: |
@@ -55,15 +55,15 @@ jobs:
             --exclude 'appsettings.Production.json' \
             -e "ssh -i ~/.ssh/id_ed25519" \
             ./publish/ \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/feborbackasociado/
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/feborbackadmin/
 
       - name: Set permissions and start service
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            sudo chown -R deploy:deploy /opt/feborbackasociado
-            [ -f /opt/feborbackasociado/FeborBack.Api ] && sudo chmod +x /opt/feborbackasociado/FeborBack.Api
+            sudo chown -R deploy:deploy /opt/feborbackadmin
+            [ -f /opt/feborbackadmin/FeborBack.Api ] && sudo chmod +x /opt/feborbackadmin/FeborBack.Api
             sudo systemctl daemon-reload
-            sudo systemctl start feborbackasociado
+            sudo systemctl start feborbackadmin
             sleep 5
           ENDSSH
 
@@ -81,10 +81,10 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             echo "=== Estado del servicio ==="
-            sudo systemctl status feborbackasociado --no-pager
+            sudo systemctl status feborbackadmin --no-pager
             echo ""
             echo "=== Ultimos logs ==="
-            sudo journalctl -u feborbackasociado -n 20 --no-pager
+            sudo journalctl -u feborbackadmin -n 20 --no-pager
             echo ""
             echo "=== Health check ==="
             for i in 1 2 3 4 5; do
