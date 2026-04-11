@@ -20,10 +20,10 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore FeborBackAsociado.sln --force
+        run: dotnet restore FeborBackAdministracion.sln --force
 
       - name: Build project
-        run: dotnet build FeborBackAsociado.sln --configuration Release --no-restore --no-incremental
+        run: dotnet build FeborBackAdministracion.sln --configuration Release --no-restore --no-incremental
 
       - name: Publish project
         run: dotnet publish FeborBack.Api/FeborBack.Api.csproj --configuration Release --output ./publish --no-build
