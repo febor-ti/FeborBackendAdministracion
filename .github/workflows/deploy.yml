@@ -1,0 +1,99 @@
+name: Deploy Backend to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build and Deploy .NET Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore FeborBackAsociado.sln --force
+
+      - name: Build project
+        run: dotnet build FeborBackAsociado.sln --configuration Release --no-restore --no-incremental
+
+      - name: Publish project
+        run: dotnet publish FeborBack.Api/FeborBack.Api.csproj --configuration Release --output ./publish --no-build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Stop service
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            sudo systemctl stop feborbackasociado || true
+            sleep 3
+            sudo pkill -f "FeborBack.Api" || true
+            sleep 2
+          ENDSSH
+
+      - name: Backup current deployment
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            'sudo cp -r /opt/feborbackasociado /opt/feborbackasociado-backup-$(date +%Y%m%d%H%M) 2>/dev/null || true'
+
+      - name: Deploy new files
+        run: |
+          rsync -avz --delete \
+            --exclude 'appsettings.Production.json' \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            ./publish/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/feborbackasociado/
+
+      - name: Set permissions and start service
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            sudo chown -R deploy:deploy /opt/feborbackasociado
+            [ -f /opt/feborbackasociado/FeborBack.Api ] && sudo chmod +x /opt/feborbackasociado/FeborBack.Api
+            sudo systemctl daemon-reload
+            sudo systemctl start feborbackasociado
+            sleep 5
+          ENDSSH
+
+      - name: Setup server (directorios, appsettings, Nginx)
+        run: |
+          scp -i ~/.ssh/id_ed25519 nginx/setup-server.sh \
+              ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/setup-server.sh
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            chmod +x /tmp/setup-server.sh
+            bash /tmp/setup-server.sh
+            rm -f /tmp/setup-server.sh
+          ENDSSH
+
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            echo "=== Estado del servicio ==="
+            sudo systemctl status feborbackasociado --no-pager
+            echo ""
+            echo "=== Ultimos logs ==="
+            sudo journalctl -u feborbackasociado -n 20 --no-pager
+            echo ""
+            echo "=== Health check ==="
+            for i in 1 2 3 4 5; do
+              if curl -s -o /dev/null -w "%{http_code}" http://localhost:7097/health 2>/dev/null | grep -q "200\|404"; then
+                echo "API respondiendo correctamente"
+                exit 0
+              fi
+              echo "Intento $i: esperando..."
+              sleep 3
+            done
+            echo "WARNING: API no responde"
+          ENDSSH

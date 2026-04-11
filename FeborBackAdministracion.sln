@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeborBack.Api", "FeborBack.Api\FeborBack.Api.csproj", "{3A4E0188-7F9B-4830-9C75-BD296DBC1F09}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeborBack.Application", "FeborBack.Application\FeborBack.Application.csproj", "{4A09E713-9EC4-40BF-B991-9DE61D5090FA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeborBack.Domain", "FeborBack.Domain\FeborBack.Domain.csproj", "{387B20C3-209F-48CA-9B5E-141D63A64079}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeborBack.Infrastructure", "FeborBack.Infrastructure\FeborBack.Infrastructure.csproj", "{4F0868A8-7226-46F9-9314-860DFB49B7B4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3A4E0188-7F9B-4830-9C75-BD296DBC1F09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A4E0188-7F9B-4830-9C75-BD296DBC1F09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A4E0188-7F9B-4830-9C75-BD296DBC1F09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A4E0188-7F9B-4830-9C75-BD296DBC1F09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A09E713-9EC4-40BF-B991-9DE61D5090FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A09E713-9EC4-40BF-B991-9DE61D5090FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A09E713-9EC4-40BF-B991-9DE61D5090FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A09E713-9EC4-40BF-B991-9DE61D5090FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{387B20C3-209F-48CA-9B5E-141D63A64079}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{387B20C3-209F-48CA-9B5E-141D63A64079}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{387B20C3-209F-48CA-9B5E-141D63A64079}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{387B20C3-209F-48CA-9B5E-141D63A64079}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F0868A8-7226-46F9-9314-860DFB49B7B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F0868A8-7226-46F9-9314-860DFB49B7B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F0868A8-7226-46F9-9314-860DFB49B7B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F0868A8-7226-46F9-9314-860DFB49B7B4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
