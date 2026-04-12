@@ -52,7 +52,6 @@ jobs:
       - name: Deploy new files
         run: |
           rsync -avz --delete \
-            --exclude 'appsettings.Production.json' \
             -e "ssh -i ~/.ssh/id_ed25519" \
             ./publish/ \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/feborbackadmin/
@@ -61,9 +60,11 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             sudo chown -R deploy:deploy /opt/feborbackadmin
+            sudo chmod -R 755 /opt/feborbackadmin
+            sudo chmod 600 /opt/feborbackadmin/appsettings.Production.json
             [ -f /opt/feborbackadmin/FeborBack.Api ] && sudo chmod +x /opt/feborbackadmin/FeborBack.Api
             sudo systemctl daemon-reload
-            sudo systemctl start feborbackadmin
+            sudo systemctl restart feborbackadmin
             sleep 5
           ENDSSH
 
