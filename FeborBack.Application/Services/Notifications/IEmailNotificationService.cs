@@ -137,4 +137,9 @@ public interface IEmailNotificationService
         string advisorName,
         string assignedByName,
         string? notes);
+
+    /// <summary>
+    /// Envía el código de verificación de doble factor al correo del usuario
+    /// </summary>
+    Task SendTwoFactorCodeAsync(string userEmail, string fullName, string code);
 }

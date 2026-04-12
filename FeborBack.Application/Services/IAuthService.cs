@@ -21,4 +21,9 @@ public interface IAuthService
     Task<bool> ValidateTokenAsync(string token);
 
     Task<UserInfoDto> CreateInitialAdminAsync();
+
+    /// <summary>
+    /// Verifica el código OTP del segundo factor. Si es válido, completa el login y retorna los tokens.
+    /// </summary>
+    Task<LoginResponseDto> VerifyTwoFactorAsync(VerifyTwoFactorDto request);
 }

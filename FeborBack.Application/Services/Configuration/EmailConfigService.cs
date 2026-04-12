@@ -33,6 +33,9 @@ public class EmailConfigService : IEmailConfigService
         if (config == null)
             return null;
 
+        // El SP no retorna two_factor_enabled — lo leemos directamente
+        var twoFactorEnabled = await _repository.GetTwoFactorEnabledAsync();
+
         return new EmailConfigDto
         {
             Id = config.Id,
@@ -45,6 +48,7 @@ public class EmailConfigService : IEmailConfigService
             FromEmail = config.FromEmail,
             FromName = config.FromName,
             IsActive = config.IsActive,
+            TwoFactorEnabled = twoFactorEnabled,
             CreatedAt = config.CreatedAt,
             UpdatedAt = config.UpdatedAt
         };
@@ -103,6 +107,7 @@ public class EmailConfigService : IEmailConfigService
             FromEmail = savedConfig.FromEmail,
             FromName = savedConfig.FromName,
             IsActive = savedConfig.IsActive,
+            TwoFactorEnabled = savedConfig.TwoFactorEnabled,
             CreatedAt = savedConfig.CreatedAt,
             UpdatedAt = savedConfig.UpdatedAt
         };
@@ -228,6 +233,16 @@ public class EmailConfigService : IEmailConfigService
             attempts.Enqueue(now);
             return true;
         }
+    }
+
+    public async Task<bool> GetTwoFactorEnabledAsync()
+    {
+        return await _repository.GetTwoFactorEnabledAsync();
+    }
+
+    public async Task<bool> SetTwoFactorEnabledAsync(bool enabled, int userId)
+    {
+        return await _repository.UpdateTwoFactorEnabledAsync(enabled, userId);
     }
 
     private static bool IsValidEmail(string email)

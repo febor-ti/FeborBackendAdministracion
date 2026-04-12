@@ -1,4 +1,6 @@
+using Dapper;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using FeborBack.Domain.Entities.Configuration;
 
 namespace FeborBack.Infrastructure.Repositories.Configuration;
@@ -68,6 +70,44 @@ public class EmailConfigRepository : BaseRepository, IEmailConfigRepository
         catch (Exception ex)
         {
             Console.WriteLine($"Error en UpsertConfigurationAsync: {ex.Message}");
+            throw;
+        }
+    }
+
+    public async Task<bool> GetTwoFactorEnabledAsync()
+    {
+        try
+        {
+            using var conn = new NpgsqlConnection(_connectionString);
+            var result = await conn.QueryFirstOrDefaultAsync<bool?>(
+                "SELECT two_factor_enabled FROM configuration.email_settings WHERE is_active = TRUE LIMIT 1");
+            return result ?? false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error en GetTwoFactorEnabledAsync: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateTwoFactorEnabledAsync(bool enabled, int userId)
+    {
+        try
+        {
+            using var conn = new NpgsqlConnection(_connectionString);
+            var rows = await conn.ExecuteAsync(
+                @"UPDATE configuration.email_settings
+                     SET two_factor_enabled = @enabled,
+                         updated_at         = NOW(),
+                         updated_by         = @userId
+                   WHERE is_active = TRUE",
+                new { enabled, userId });
+
+            return rows > 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error en UpdateTwoFactorEnabledAsync: {ex.Message}");
             throw;
         }
     }

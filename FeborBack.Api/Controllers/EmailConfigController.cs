@@ -7,6 +7,8 @@ using System.Security.Claims;
 
 namespace FeborBack.Api.Controllers;
 
+public record TwoFactorToggleDto(bool Enabled);
+
 [ApiController]
 [Route("api/[controller]")]
 [Authorize] // Requiere autenticación
@@ -36,10 +38,10 @@ public class EmailConfigController : ControllerBase
 
             if (config == null)
             {
-                return NotFound(new { message = "No existe una configuración de correo" });
+                return NotFound(new { success = false, message = "No existe una configuración de correo" });
             }
 
-            return Ok(config);
+            return Ok(new { success = true, message = "Configuración obtenida", data = config });
         }
         catch (Exception ex)
         {
@@ -172,6 +174,42 @@ public class EmailConfigController : ControllerBase
                 success = false,
                 error = ex.Message
             });
+        }
+    }
+
+    /// <summary>
+    /// Activa o desactiva la autenticación de doble factor (2FA) por correo
+    /// </summary>
+    [HttpPut("two-factor")]
+    [MenuAuthorize("manage", "admin")]
+    public async Task<ActionResult<object>> SetTwoFactor([FromBody] TwoFactorToggleDto dto)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var result = await _emailConfigService.SetTwoFactorEnabledAsync(dto.Enabled, userId);
+
+            if (!result)
+                return NotFound(new { success = false, message = "No hay configuración de correo activa para actualizar." });
+
+            _logger.LogInformation(
+                "2FA {State} por usuario {UserId}",
+                dto.Enabled ? "activado" : "desactivado",
+                userId);
+
+            return Ok(new
+            {
+                success = true,
+                message = dto.Enabled
+                    ? "Doble factor activado. Los usuarios deberán verificar su identidad con un código enviado por correo."
+                    : "Doble factor desactivado.",
+                data = new { twoFactorEnabled = dto.Enabled }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error actualizando configuración de 2FA");
+            return StatusCode(500, new { success = false, message = "Error interno del servidor" });
         }
     }
 

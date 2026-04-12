@@ -45,6 +45,9 @@ public class EmailSettings
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [Column("two_factor_enabled")]
+    public bool TwoFactorEnabled { get; set; } = false;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

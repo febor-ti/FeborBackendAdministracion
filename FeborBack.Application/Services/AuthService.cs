@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using FeborBack.Application.DTOs.Auth;
+using FeborBack.Application.Services.Configuration;
 using FeborBack.Application.Services.Notifications;
 using FeborBack.Domain.Entities;
 using FeborBack.Infrastructure.Repositories;
@@ -12,6 +13,8 @@ public class AuthService : IAuthService
     private readonly IJwtService _jwtService;
     private readonly IPasswordService _passwordService;
     private readonly IEmailNotificationService _emailService;
+    private readonly IEmailConfigService _emailConfigService;
+    private readonly IOtpService _otpService;
     private readonly IConfiguration _configuration;
     private readonly int _refreshTokenExpirationDays;
     private readonly int _maxFailedAttempts;
@@ -21,12 +24,16 @@ public class AuthService : IAuthService
         IJwtService jwtService,
         IPasswordService passwordService,
         IEmailNotificationService emailService,
+        IEmailConfigService emailConfigService,
+        IOtpService otpService,
         IConfiguration configuration)
     {
         _authRepository = authRepository;
         _jwtService = jwtService;
         _passwordService = passwordService;
         _emailService = emailService;
+        _emailConfigService = emailConfigService;
+        _otpService = otpService;
         _configuration = configuration;
         _refreshTokenExpirationDays = int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"] ?? "7");
         _maxFailedAttempts = int.Parse(_configuration["Auth:MaxFailedAttempts"] ?? "5");
@@ -68,6 +75,41 @@ public class AuthService : IAuthService
 
         await _authRepository.UpdateUserAsync(user);
 
+        // ── Verificar si el 2FA está habilitado ────────────────────────────────
+        var twoFactorEnabled = await _emailConfigService.GetTwoFactorEnabledAsync();
+        if (twoFactorEnabled)
+        {
+            var code = _otpService.GenerateCode();
+            var sessionToken = _otpService.GenerateSessionToken();
+            _otpService.StoreCode(sessionToken, user.UserId, code);
+
+            var fullName = user.Person?.FullName ?? user.Username ?? user.Email;
+            try
+            {
+                await _emailService.SendTwoFactorCodeAsync(user.Email, fullName, code);
+            }
+            catch (Exception emailEx)
+            {
+                // Si el correo falla limpiamos el código para no dejar basura en caché
+                _otpService.RemoveCode(sessionToken);
+                throw new InvalidOperationException(
+                    $"No se pudo enviar el código de verificación al correo {user.Email}. " +
+                    $"Verifica la configuración SMTP. Detalle: {emailEx.Message}");
+            }
+
+            return new LoginResponseDto
+            {
+                RequiresTwoFactor = true,
+                SessionToken = sessionToken
+            };
+        }
+
+        // ── Login completo sin 2FA ─────────────────────────────────────────────
+        return await BuildLoginResponseAsync(user);
+    }
+
+    private async Task<LoginResponseDto> BuildLoginResponseAsync(Domain.Entities.LoginUser user)
+    {
         var roles = await _authRepository.GetUserRolesAsync(user.UserId);
         var roleIds = await _authRepository.GetUserRoleIdsAsync(user.UserId);
         var claims = await _authRepository.GetUserClaimsAsync(user.UserId);
@@ -107,6 +149,29 @@ public class AuthService : IAuthService
             ExpiresAt = _jwtService.GetTokenExpiration(accessToken),
             User = userInfo
         };
+    }
+
+    public async Task<LoginResponseDto> VerifyTwoFactorAsync(VerifyTwoFactorDto request)
+    {
+        var entry = _otpService.GetCode(request.SessionToken);
+
+        if (entry == null)
+            throw new UnauthorizedAccessException("El código ha expirado o el enlace de sesión no es válido. Inicia sesión nuevamente.");
+
+        if (entry.Value.Code != request.Code.Trim())
+        {
+            // Eliminamos el código tras un intento fallido para evitar fuerza bruta
+            _otpService.RemoveCode(request.SessionToken);
+            throw new UnauthorizedAccessException("Código incorrecto. Por favor inicia sesión nuevamente.");
+        }
+
+        _otpService.RemoveCode(request.SessionToken);
+
+        var user = await _authRepository.GetUserByIdAsync(entry.Value.UserId);
+        if (user == null || user.StatusId != 1)
+            throw new UnauthorizedAccessException("Usuario no autorizado.");
+
+        return await BuildLoginResponseAsync(user);
     }
 
     public async Task<(UserInfoDto User, string? TemporaryPassword)> RegisterUserAsync(RegisterUserDto request, int createdBy)

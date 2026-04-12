@@ -2438,4 +2438,93 @@ Por favor, no responder a este correo."
         await client.SendAsync(message);
         await client.DisconnectAsync(true);
     }
+
+    public async Task SendTwoFactorCodeAsync(string userEmail, string fullName, string code)
+    {
+        var emailConfig = await _emailConfigRepository.GetActiveConfigurationAsync();
+        if (emailConfig == null)
+        {
+            _logger.LogWarning("No se pudo enviar código 2FA: No hay configuración de email activa");
+            throw new InvalidOperationException("No hay configuración de correo activa para enviar el código de verificación.");
+        }
+
+        var decryptedPassword = _encryptionService.Decrypt(emailConfig.SmtpPassword);
+
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress(emailConfig.FromName, emailConfig.FromEmail));
+        message.To.Add(new MailboxAddress(fullName, userEmail));
+        message.Subject = "Código de verificación - Portal Febor";
+
+        var bodyBuilder = new BodyBuilder
+        {
+            HtmlBody = $@"
+<!DOCTYPE html>
+<html lang=""es"">
+<head><meta charset=""UTF-8"" /><meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" /></head>
+<body style=""font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0;"">
+  <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background: #f5f5f5;"">
+    <tr>
+      <td align=""center"" style=""padding: 40px 20px;"">
+        <table width=""600"" cellpadding=""0"" cellspacing=""0"" style=""background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"">
+          <!-- Header -->
+          <tr>
+            <td style=""background: #17564A; padding: 32px 40px; text-align: center;"">
+              <h1 style=""color: #ffffff; margin: 0; font-size: 22px; font-weight: 600;"">Portal Administrativo Febor</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style=""padding: 40px;"">
+              <p style=""color: #333; font-size: 16px; margin: 0 0 16px;"">Hola <strong>{fullName}</strong>,</p>
+              <p style=""color: #555; font-size: 15px; margin: 0 0 28px;"">
+                Tu código de verificación de acceso es:
+              </p>
+              <!-- Code box -->
+              <div style=""text-align: center; margin: 0 0 28px;"">
+                <span style=""display: inline-block; background: #f0f7f6; border: 2px solid #17564A; border-radius: 8px; padding: 16px 40px; font-size: 36px; font-weight: 700; letter-spacing: 10px; color: #17564A; font-family: monospace;"">
+                  {code}
+                </span>
+              </div>
+              <p style=""color: #888; font-size: 13px; margin: 0 0 12px;"">
+                Este código es válido por <strong>15 minutos</strong>. No lo compartas con nadie.
+              </p>
+              <p style=""color: #888; font-size: 13px; margin: 0;"">
+                Si no intentaste iniciar sesión, ignora este correo.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style=""background: #f9f9f9; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;"">
+              <p style=""color: #aaa; font-size: 12px; margin: 0;"">Febor Cooperativa &mdash; mensaje automático, no responder.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>",
+            TextBody = $"Tu código de verificación de acceso al Portal Febor es: {code}\n\nVálido por 15 minutos. No lo compartas con nadie."
+        };
+
+        message.Body = bodyBuilder.ToMessageBody();
+
+        using var client = new SmtpClient();
+
+        var secureSocketOptions = SecureSocketOptions.Auto;
+        if (emailConfig.UseSsl)
+            secureSocketOptions = SecureSocketOptions.SslOnConnect;
+        else if (emailConfig.UseTls)
+            secureSocketOptions = SecureSocketOptions.StartTls;
+        else
+            secureSocketOptions = SecureSocketOptions.None;
+
+        await client.ConnectAsync(emailConfig.SmtpHost, emailConfig.SmtpPort, secureSocketOptions);
+        await client.AuthenticateAsync(emailConfig.SmtpUsername, decryptedPassword);
+        await client.SendAsync(message);
+        await client.DisconnectAsync(true);
+
+        _logger.LogInformation("Código 2FA enviado a {Email}", userEmail);
+    }
 }

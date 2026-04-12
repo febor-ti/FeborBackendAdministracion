@@ -14,6 +14,7 @@ public class EmailConfigDto
     public string FromEmail { get; set; } = string.Empty;
     public string FromName { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public bool TwoFactorEnabled { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

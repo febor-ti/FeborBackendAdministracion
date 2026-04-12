@@ -32,6 +32,9 @@ var builder = WebApplication.CreateBuilder(args);
 // HttpContextAccessor (para obtener el usuario actual en servicios)
 builder.Services.AddHttpContextAccessor();
 
+// MemoryCache para OTP 2FA
+builder.Services.AddMemoryCache();
+
 // Entity Framework y Base de Datos
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -84,6 +87,9 @@ builder.Services.AddScoped<FeborBack.Application.Services.Notifications.IEmailNo
 // Servicios de Cursos
 builder.Services.AddScoped<FeborBack.Domain.Interfaces.Courses.ICourseRepository, CourseRepositories.CourseRepository>();
 builder.Services.AddScoped<CourseServices.ICourseService, CourseServices.CourseService>();
+
+// Servicio OTP para 2FA
+builder.Services.AddSingleton<FeborBack.Application.Services.IOtpService, FeborBack.Application.Services.OtpService>();
 
 // Servicios de reCAPTCHA
 builder.Services.AddHttpClient<IReCaptchaService, ReCaptchaService>();

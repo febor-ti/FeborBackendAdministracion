@@ -131,6 +131,11 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new { success = false, message = ex.Message });
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error operacional en login (2FA / email)");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error en login");
@@ -284,6 +289,32 @@ public class AuthController : ControllerBase
         }
         catch (Exception)
         {
+            return StatusCode(500, new { success = false, message = "Error interno" });
+        }
+    }
+
+    /// <summary>
+    /// Verificar código de doble factor (2FA)
+    /// </summary>
+    [HttpPost("verify-2fa")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyTwoFactor([FromBody] FeborBack.Application.DTOs.Auth.VerifyTwoFactorDto request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.SessionToken) || string.IsNullOrWhiteSpace(request.Code))
+                return BadRequest(new { success = false, message = "El token de sesión y el código son requeridos." });
+
+            var result = await _authService.VerifyTwoFactorAsync(request);
+            return Ok(new { success = true, message = "Verificación exitosa", data = result });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en verify-2fa");
             return StatusCode(500, new { success = false, message = "Error interno" });
         }
     }

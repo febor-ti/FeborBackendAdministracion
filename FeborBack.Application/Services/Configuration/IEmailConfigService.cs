@@ -8,4 +8,6 @@ public interface IEmailConfigService
     Task<EmailConfigDto> SaveConfigurationAsync(SaveEmailConfigDto dto, int userId);
     Task<bool> SendTestEmailAsync(TestEmailDto dto, int userId);
     Task<bool> VerifyConnectionAsync(VerifyConnectionDto dto);
+    Task<bool> GetTwoFactorEnabledAsync();
+    Task<bool> SetTwoFactorEnabledAsync(bool enabled, int userId);
 }
