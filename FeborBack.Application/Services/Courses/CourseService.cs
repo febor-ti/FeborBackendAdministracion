@@ -90,6 +90,37 @@ public class CourseService : ICourseService
         course.Description = dto.Description?.Trim();
         course.UpdatedBy   = updatedBy;
 
+        // Cambiar slug si se proporcionó uno diferente
+        if (!string.IsNullOrEmpty(dto.Slug))
+        {
+            var newSlug = dto.Slug.Trim().ToLowerInvariant();
+            if (newSlug != course.Slug)
+            {
+                var existing = await _repo.GetBySlugAsync(newSlug);
+                if (existing != null && existing.Id != id)
+                    throw new InvalidOperationException($"Ya existe un curso con el slug '{newSlug}'.");
+
+                var basePath     = GetBasePath();
+                var inactivePath = GetInactivePath();
+                var baseUrl      = _config["Courses:BaseUrl"]?.TrimEnd('/') ?? "https://virtual.febor.co/cursos";
+
+                var oldActiveDir   = Path.Combine(basePath, course.Slug);
+                var oldInactiveDir = Path.Combine(inactivePath, course.Slug);
+                var newActiveDir   = Path.Combine(basePath, newSlug);
+                var newInactiveDir = Path.Combine(inactivePath, newSlug);
+
+                if (course.IsActive && Directory.Exists(oldActiveDir))
+                    Directory.Move(oldActiveDir, newActiveDir);
+                else if (!course.IsActive && Directory.Exists(oldInactiveDir))
+                    Directory.Move(oldInactiveDir, newInactiveDir);
+
+                course.Slug     = newSlug;
+                course.FilePath = Path.Combine(basePath, newSlug, "index.html");
+                course.PublicUrl = $"{baseUrl}/{newSlug}/";
+                _logger.LogInformation("Slug del curso {Id} cambiado a '{NewSlug}'", id, newSlug);
+            }
+        }
+
         // Reemplazar archivo HTML si se proporcionó uno nuevo
         if (fileStream != null && !string.IsNullOrEmpty(fileName))
         {

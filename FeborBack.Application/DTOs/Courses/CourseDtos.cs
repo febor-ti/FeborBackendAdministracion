@@ -45,6 +45,11 @@ public class UpdateCourseDto
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(100)]
+    [RegularExpression(@"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        ErrorMessage = "El slug solo puede contener letras minúsculas, números y guiones (sin espacios)")]
+    public string? Slug { get; set; }
+
     [MaxLength(500)]
     public string? Description { get; set; }
 }
