@@ -76,7 +76,7 @@ public class CoursesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error publicando curso '{Slug}'", dto.Slug);
-            return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            return StatusCode(500, new { success = false, message = ex.Message });
         }
     }
 
@@ -121,7 +121,7 @@ public class CoursesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error actualizando curso {Id}", id);
-            return StatusCode(500, new { success = false, message = "Error interno del servidor" });
+            return StatusCode(500, new { success = false, message = ex.Message });
         }
     }
 
