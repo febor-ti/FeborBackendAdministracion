@@ -12,8 +12,8 @@ NGINX_SITE="/etc/nginx/sites-enabled/febor.conf"
 # ── 1. Directorios ────────────────────────────────────────────────────────────
 echo "[1/3] Creando directorios..."
 sudo mkdir -p "$COURSES_DIR"
-sudo chown -R deploy:www-data "$FEBOR_DIR"
-sudo chmod -R 775 "$FEBOR_DIR"
+sudo chown -R deploy:deploy "$FEBOR_DIR"
+sudo chmod -R 755 "$FEBOR_DIR"
 echo "      OK: $COURSES_DIR listo"
 
 # ── 2. appsettings.Production.json ───────────────────────────────────────────
