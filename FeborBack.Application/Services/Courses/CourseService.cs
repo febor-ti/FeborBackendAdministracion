@@ -112,32 +112,61 @@ public class CourseService : ICourseService
         var course = await _repo.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Curso con ID {id} no encontrado.");
 
-        var activeDir    = Path.GetDirectoryName(course.FilePath)!;
-        var inactiveBase = Path.Combine(GetInactivePath(), course.Slug);
+        var inactivePath = GetInactivePath();                           // /var/www/febor/cursos_inactive
+        var activeDir    = Path.GetDirectoryName(course.FilePath)!;    // /var/www/febor/cursos/{slug}
+        var inactiveDir  = Path.Combine(inactivePath, course.Slug);    // /var/www/febor/cursos_inactive/{slug}
+
+        _logger.LogInformation(
+            "ToggleActive '{Slug}': IsActive={IsActive} | activeDir={AD} exists={ADE} | inactiveDir={ID} exists={IDE}",
+            course.Slug, course.IsActive,
+            activeDir,   Directory.Exists(activeDir),
+            inactiveDir, Directory.Exists(inactiveDir));
 
         if (course.IsActive)
         {
-            // Desactivar: mover fuera del directorio servido por Nginx
+            // ── Desactivar: mover fuera de /cursos/ → Nginx devuelve 404 ────
             course.Deactivate(updatedBy);
+
             if (Directory.Exists(activeDir))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(inactiveBase)!);
-                Directory.Move(activeDir, inactiveBase);
+                Directory.CreateDirectory(inactivePath);        // garantiza que /cursos_inactive/ exista
+                Directory.Move(activeDir, inactiveDir);
+                _logger.LogInformation("Movido a inactivo: {From} → {To}", activeDir, inactiveDir);
+            }
+            else
+            {
+                _logger.LogWarning("Directorio activo no encontrado: {Dir}", activeDir);
             }
         }
         else
         {
-            // Activar: restaurar al directorio servido por Nginx
+            // ── Activar: restaurar de /cursos_inactive/ → /cursos/ ──────────
             course.Activate(updatedBy);
-            if (Directory.Exists(inactiveBase))
+
+            if (Directory.Exists(inactiveDir))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(activeDir)!);
-                Directory.Move(inactiveBase, activeDir);
+                Directory.CreateDirectory(Path.GetDirectoryName(activeDir)!);  // garantiza que /cursos/ exista
+                Directory.Move(inactiveDir, activeDir);
+                _logger.LogInformation("Restaurado a activo: {From} → {To}", inactiveDir, activeDir);
+            }
+            else if (Directory.Exists(activeDir))
+            {
+                // El directorio ya está en la ubicación activa (la desactivación anterior
+                // no llegó a moverlo — se actualiza solo el estado en BD)
+                _logger.LogWarning(
+                    "Directorio inactivo no encontrado ({ID}), pero el activo sí existe ({AD}). Solo se actualiza BD.",
+                    inactiveDir, activeDir);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"No se encontró el directorio del curso ni en '{activeDir}' ni en '{inactiveDir}'. " +
+                    "Verifica los permisos del servidor.");
             }
         }
 
         var updated = await _repo.UpdateAsync(course);
-        _logger.LogInformation("Curso '{Slug}' {Estado} por usuario {UserId}",
+        _logger.LogInformation("Curso '{Slug}' {Estado} correctamente por usuario {UserId}",
             course.Slug, course.IsActive ? "activado" : "desactivado", updatedBy);
 
         return ToDto(updated);

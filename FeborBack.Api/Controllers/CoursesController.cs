@@ -144,6 +144,11 @@ public class CoursesController : ControllerBase
         {
             return NotFound(new { success = false, message = ex.Message });
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Error de configuración al cambiar estado del curso {Id}", id);
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error cambiando estado del curso {Id}", id);

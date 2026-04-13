@@ -36,6 +36,8 @@ with open(path, 'r') as f:
 cfg['Courses'] = {
     'BasePath': 'C:\\Febor\\Cursos',
     'ProductionBasePath': '/var/www/febor/cursos',
+    'InactivePath': 'C:\\Febor\\CursosInactivos',
+    'ProductionInactivePath': '/var/www/febor/cursos_inactive',
     'BaseUrl': 'https://virtual.febor.co/cursos'
 }
 cfg['ErrorPages'] = {
