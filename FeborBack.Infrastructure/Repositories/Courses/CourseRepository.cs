@@ -1,3 +1,4 @@
+using Dapper;
 using FeborBack.Domain.Entities.Courses;
 using FeborBack.Domain.Interfaces.Courses;
 using FeborBack.Infrastructure.Data;
@@ -50,5 +51,22 @@ public class CourseRepository : ICourseRepository
     {
         _context.Courses.Remove(course);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<Dictionary<int, string>> GetUserNamesAsync(IEnumerable<int> userIds)
+    {
+        var ids = userIds.Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<int, string>();
+
+        var conn = _context.Database.GetDbConnection();
+        const string sql = """
+            SELECT u.user_id AS UserId, p.full_name AS FullName
+            FROM auth.login_user u
+            JOIN auth.person p ON p.person_id = u.person_id
+            WHERE u.user_id = ANY(@Ids)
+            """;
+
+        var rows = await conn.QueryAsync<(int UserId, string FullName)>(sql, new { Ids = ids.ToArray() });
+        return rows.ToDictionary(r => r.UserId, r => r.FullName);
     }
 }

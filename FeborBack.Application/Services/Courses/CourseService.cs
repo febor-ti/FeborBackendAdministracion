@@ -22,7 +22,16 @@ public class CourseService : ICourseService
     public async Task<IEnumerable<CourseDto>> GetAllAsync()
     {
         var courses = await _repo.GetAllAsync();
-        return courses.Select(ToDto);
+
+        // Recopilar todos los IDs de usuario referenciados para traer nombres en un solo query
+        var userIds = courses
+            .SelectMany(c => new[] { c.CreatedBy, c.UpdatedBy })
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct();
+
+        var names = await _repo.GetUserNamesAsync(userIds);
+        return courses.Select(c => ToDto(c, names));
     }
 
     public async Task<CourseDto> CreateAsync(CreateCourseDto dto, Stream fileStream, string fileName, int createdBy)
@@ -98,6 +107,23 @@ public class CourseService : ICourseService
         return ToDto(updated);
     }
 
+    public async Task<CourseDto> ToggleActiveAsync(int id, int updatedBy)
+    {
+        var course = await _repo.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"Curso con ID {id} no encontrado.");
+
+        if (course.IsActive)
+            course.Deactivate(updatedBy);
+        else
+            course.Activate(updatedBy);
+
+        var updated = await _repo.UpdateAsync(course);
+        _logger.LogInformation("Curso '{Slug}' {Estado} por usuario {UserId}",
+            course.Slug, course.IsActive ? "activado" : "desactivado", updatedBy);
+
+        return ToDto(updated);
+    }
+
     public async Task DeleteAsync(int id, int deletedBy)
     {
         var course = await _repo.GetByIdAsync(id)
@@ -157,14 +183,23 @@ public class CourseService : ICourseService
         return path;
     }
 
-    private static CourseDto ToDto(Course c) => new()
+    private static CourseDto ToDto(Course c, Dictionary<int, string>? names = null) => new()
     {
-        Id          = c.Id,
-        Name        = c.Name,
-        Slug        = c.Slug,
-        Description = c.Description,
-        PublicUrl   = c.PublicUrl,
-        IsActive    = c.IsActive,
-        CreatedAt   = c.CreatedAt
+        Id            = c.Id,
+        Name          = c.Name,
+        Slug          = c.Slug,
+        Description   = c.Description,
+        PublicUrl     = c.PublicUrl,
+        IsActive      = c.IsActive,
+        CreatedBy     = c.CreatedBy,
+        CreatedByName = c.CreatedBy.HasValue && names != null
+                            ? names.GetValueOrDefault(c.CreatedBy.Value)
+                            : null,
+        CreatedAt     = c.CreatedAt,
+        UpdatedBy     = c.UpdatedBy,
+        UpdatedByName = c.UpdatedBy.HasValue && names != null
+                            ? names.GetValueOrDefault(c.UpdatedBy.Value)
+                            : null,
+        UpdatedAt     = c.UpdatedAt
     };
 }

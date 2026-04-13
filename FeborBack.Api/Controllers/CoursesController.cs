@@ -126,6 +126,32 @@ public class CoursesController : ControllerBase
     }
 
     /// <summary>
+    /// Activa o desactiva un curso sin eliminarlo.
+    /// </summary>
+    [HttpPatch("{id:int}/toggle-active")]
+    [MenuAuthorize("manage", "courses")]
+    public async Task<ActionResult<object>> ToggleActive(int id)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var course = await _courseService.ToggleActiveAsync(id, userId);
+            var estado = course.IsActive ? "activado" : "desactivado";
+            _logger.LogInformation("Curso {Id} {Estado} por usuario {UserId}", id, estado, userId);
+            return Ok(new { success = true, message = $"Curso '{course.Name}' {estado} correctamente", data = course });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cambiando estado del curso {Id}", id);
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Elimina un curso y su archivo del servidor.
     /// </summary>
     [HttpDelete("{id:int}")]

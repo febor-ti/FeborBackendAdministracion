@@ -12,9 +12,15 @@ NGINX_SITE="/etc/nginx/sites-enabled/febor.conf"
 # ── 1. Directorios ────────────────────────────────────────────────────────────
 echo "[1/3] Creando directorios..."
 sudo mkdir -p "$COURSES_DIR"
-sudo chown -R deploy:deploy "$FEBOR_DIR"
+
+# Detectar el usuario que corre el servicio de la API
+SERVICE_USER=$(sudo systemctl show feborbackadmin --property=User --value 2>/dev/null || echo "deploy")
+[ -z "$SERVICE_USER" ] && SERVICE_USER="deploy"
+echo "      Usuario del servicio: $SERVICE_USER"
+
+sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$FEBOR_DIR"
 sudo chmod -R 755 "$FEBOR_DIR"
-echo "      OK: $COURSES_DIR listo"
+echo "      OK: $COURSES_DIR → propietario $SERVICE_USER"
 
 # ── 2. appsettings.Production.json ───────────────────────────────────────────
 echo "[2/3] Actualizando appsettings.Production.json..."
