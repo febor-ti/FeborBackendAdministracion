@@ -112,22 +112,28 @@ public class CourseService : ICourseService
         var course = await _repo.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Curso con ID {id} no encontrado.");
 
-        var activeDir   = Path.GetDirectoryName(course.FilePath)!;
-        var disabledDir = activeDir + "_disabled";
+        var activeDir    = Path.GetDirectoryName(course.FilePath)!;
+        var inactiveBase = Path.Combine(GetInactivePath(), course.Slug);
 
         if (course.IsActive)
         {
-            // Desactivar: renombrar directorio para que Nginx devuelva 404
+            // Desactivar: mover fuera del directorio servido por Nginx
             course.Deactivate(updatedBy);
             if (Directory.Exists(activeDir))
-                Directory.Move(activeDir, disabledDir);
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(inactiveBase)!);
+                Directory.Move(activeDir, inactiveBase);
+            }
         }
         else
         {
-            // Activar: restaurar directorio
+            // Activar: restaurar al directorio servido por Nginx
             course.Activate(updatedBy);
-            if (Directory.Exists(disabledDir))
-                Directory.Move(disabledDir, activeDir);
+            if (Directory.Exists(inactiveBase))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(activeDir)!);
+                Directory.Move(inactiveBase, activeDir);
+            }
         }
 
         var updated = await _repo.UpdateAsync(course);
@@ -180,6 +186,22 @@ public class CourseService : ICourseService
 
         if (string.IsNullOrEmpty(path))
             throw new InvalidOperationException($"La configuración '{key}' no está definida en appsettings.");
+
+        return path;
+    }
+
+    private string GetInactivePath()
+    {
+        var isWindows = OperatingSystem.IsWindows();
+        var key       = isWindows ? "Courses:InactivePath" : "Courses:ProductionInactivePath";
+        var path      = _config[key];
+
+        if (string.IsNullOrEmpty(path))
+        {
+            // Fallback: carpeta hermana de la ruta activa
+            var basePath = GetBasePath();
+            path = basePath.TrimEnd('/', '\\') + "_inactive";
+        }
 
         return path;
     }

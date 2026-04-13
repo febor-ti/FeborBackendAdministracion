@@ -12,6 +12,7 @@ NGINX_SITE="/etc/nginx/sites-enabled/febor.conf"
 # ── 1. Directorios ────────────────────────────────────────────────────────────
 echo "[1/3] Creando directorios..."
 sudo mkdir -p "$COURSES_DIR"
+sudo mkdir -p "${COURSES_DIR%/cursos}/cursos_inactive"
 
 # Detectar el usuario que corre el servicio de la API
 SERVICE_USER=$(sudo systemctl show feborbackadmin --property=User --value 2>/dev/null || echo "deploy")
