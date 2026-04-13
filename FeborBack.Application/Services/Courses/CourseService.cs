@@ -112,10 +112,23 @@ public class CourseService : ICourseService
         var course = await _repo.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Curso con ID {id} no encontrado.");
 
+        var activeDir   = Path.GetDirectoryName(course.FilePath)!;
+        var disabledDir = activeDir + "_disabled";
+
         if (course.IsActive)
+        {
+            // Desactivar: renombrar directorio para que Nginx devuelva 404
             course.Deactivate(updatedBy);
+            if (Directory.Exists(activeDir))
+                Directory.Move(activeDir, disabledDir);
+        }
         else
+        {
+            // Activar: restaurar directorio
             course.Activate(updatedBy);
+            if (Directory.Exists(disabledDir))
+                Directory.Move(disabledDir, activeDir);
+        }
 
         var updated = await _repo.UpdateAsync(course);
         _logger.LogInformation("Curso '{Slug}' {Estado} por usuario {UserId}",
