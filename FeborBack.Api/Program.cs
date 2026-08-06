@@ -22,6 +22,8 @@ using ConfigurationServices = FeborBack.Application.Services.Configuration;
 using ConfigurationRepositories = FeborBack.Infrastructure.Repositories.Configuration;
 using CourseServices = FeborBack.Application.Services.Courses;
 using CourseRepositories = FeborBack.Infrastructure.Repositories.Courses;
+using FormServices = FeborBack.Application.Services.Forms;
+using FormRepositories = FeborBack.Infrastructure.Repositories.Forms;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,6 +89,10 @@ builder.Services.AddScoped<FeborBack.Application.Services.Notifications.IEmailNo
 // Servicios de Cursos
 builder.Services.AddScoped<FeborBack.Domain.Interfaces.Courses.ICourseRepository, CourseRepositories.CourseRepository>();
 builder.Services.AddScoped<CourseServices.ICourseService, CourseServices.CourseService>();
+
+// Servicios de Formularios
+builder.Services.AddScoped<FeborBack.Domain.Interfaces.Forms.IFormRepository, FormRepositories.FormRepository>();
+builder.Services.AddScoped<FormServices.IFormService, FormServices.FormService>();
 
 // Servicio OTP para 2FA
 builder.Services.AddSingleton<FeborBack.Application.Services.IOtpService, FeborBack.Application.Services.OtpService>();
@@ -277,6 +283,23 @@ if (app.Environment.IsDevelopment())
         FileProvider = coursesProvider,
         RequestPath  = "/cursos"
     });
+
+    // Igual que los cursos: en desarrollo la API sirve los formularios.
+    // En producción Nginx los sirve desde /var/www/febor/formularios.
+    var formsPath = builder.Configuration["Forms:BasePath"] ?? "C:\\Febor\\Formularios";
+    Directory.CreateDirectory(formsPath);
+    var formsProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(formsPath);
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        FileProvider     = formsProvider,
+        RequestPath      = "/formularios",
+        DefaultFileNames = ["index.html"]
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = formsProvider,
+        RequestPath  = "/formularios"
+    });
 }
 
 app.UseHttpsRedirection();
@@ -302,10 +325,11 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// No cachear respuestas de la API (excluye archivos estáticos de cursos)
+// No cachear respuestas de la API (excluye archivos estáticos de cursos y formularios)
 app.Use(async (context, next) =>
 {
-    if (!context.Request.Path.StartsWithSegments("/cursos"))
+    if (!context.Request.Path.StartsWithSegments("/cursos") &&
+        !context.Request.Path.StartsWithSegments("/formularios"))
     {
         context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
         context.Response.Headers["Pragma"] = "no-cache";

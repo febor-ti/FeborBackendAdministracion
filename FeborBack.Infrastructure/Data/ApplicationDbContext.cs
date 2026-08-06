@@ -1,12 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using FeborBack.Domain.Common;
 using FeborBack.Domain.Entities.Courses;
+using FeborBack.Domain.Entities.Forms;
 
 namespace FeborBack.Infrastructure.Data;
 
 public class ApplicationDbContext : DbContext
 {
     public DbSet<Course> Courses { get; set; } = null!;
+    public DbSet<FormPage> Forms { get; set; } = null!;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
