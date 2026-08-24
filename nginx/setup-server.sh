@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # setup-server.sh — ejecutado por GitHub Actions en cada deploy.
-# Crea directorios y actualiza appsettings.Production.json con las secciones de cursos.
+# Crea directorios y actualiza appsettings.Production.json con las secciones
+# de cursos y formularios.
 
 set -e
 
 FEBOR_DIR="/var/www/febor"
 COURSES_DIR="/var/www/febor/cursos"
+FORMS_DIR="/var/www/febor/formularios"
 APPSETTINGS="/opt/feborbackadmin/appsettings.Production.json"
 NGINX_SITE="/etc/nginx/sites-enabled/febor.conf"
 
@@ -13,6 +15,8 @@ NGINX_SITE="/etc/nginx/sites-enabled/febor.conf"
 echo "[1/3] Creando directorios..."
 sudo mkdir -p "$COURSES_DIR"
 sudo mkdir -p "${COURSES_DIR%/cursos}/cursos_inactive"
+sudo mkdir -p "$FORMS_DIR"
+sudo mkdir -p "${FORMS_DIR%/formularios}/formularios_inactive"
 
 # Detectar el usuario que corre el servicio de la API
 SERVICE_USER=$(sudo systemctl show feborbackadmin --property=User --value 2>/dev/null || echo "deploy")
@@ -40,6 +44,13 @@ cfg['Courses'] = {
     'ProductionInactivePath': '/var/www/febor/cursos_inactive',
     'BaseUrl': 'https://virtual.febor.co/cursos'
 }
+cfg['Forms'] = {
+    'BasePath': 'C:\\Febor\\Formularios',
+    'ProductionBasePath': '/var/www/febor/formularios',
+    'InactivePath': 'C:\\Febor\\FormulariosInactivos',
+    'ProductionInactivePath': '/var/www/febor/formularios_inactive',
+    'BaseUrl': 'https://virtual.febor.co/formularios'
+}
 cfg['ErrorPages'] = {
     'NotFoundPath': 'C:\\Febor\\404.html',
     'ProductionNotFoundPath': '/var/www/febor/404.html'
@@ -48,7 +59,7 @@ cfg['ErrorPages'] = {
 with open(path, 'w') as f:
     json.dump(cfg, f, indent=4, ensure_ascii=False)
 
-print('      OK: Courses y ErrorPages inyectados')
+print('      OK: Courses, Forms y ErrorPages inyectados')
 PYEOF
 else
     echo "      WARN: $APPSETTINGS no encontrado, omitiendo"
